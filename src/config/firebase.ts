@@ -13,16 +13,15 @@ const firebaseConfig = {
   storageBucket: "shovel-hero.firebasestorage.app",
   messagingSenderId: "706841698283",
   appId: "1:706841698283:web:b3cb40bdc0f54758f7c3ae",
-  measurementId: "G-S81XQM0ZSK"
+  measurementId: "G-S81XQM0ZSK",
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig)
+const app = initializeApp(firebaseConfig);
 
 // Initialize services
-export const db = getFirestore(app)
-export const auth = getAuth(app)
-export const functions = getFunctions(app)
+export const db = getFirestore(app);
+export const auth = getAuth(app);
+export const functions = getFunctions(app);
 
-export default app
-
+export default app;

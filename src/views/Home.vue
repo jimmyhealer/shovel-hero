@@ -16,15 +16,14 @@
 </template>
 
 <script setup>
-import { useMapStore } from '../stores/map'
-import MapView from '../components/Map/MapView.vue'
-import DetailPanel from '../components/Map/DetailPanel.vue'
-import FilterBar from '../components/Map/FilterBar.vue'
+import { useMapStore } from "../stores/map";
+import MapView from "../components/Map/MapView.vue";
+import DetailPanel from "../components/Map/DetailPanel.vue";
+import FilterBar from "../components/Map/FilterBar.vue";
 
-const mapStore = useMapStore()
+const mapStore = useMapStore();
 
 function handleMarkerClick(demand) {
-  mapStore.selectDemand(demand)
+  mapStore.selectDemand(demand);
 }
 </script>
-

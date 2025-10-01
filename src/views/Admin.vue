@@ -21,7 +21,7 @@
       <div class="bg-white rounded-lg shadow p-6">
         <h2 class="text-xl font-semibold mb-4">待審核項目</h2>
         <p class="text-gray-600">管理後台功能開發中...</p>
-        
+
         <!-- TODO: Implement admin features -->
         <div class="mt-6 space-y-4">
           <div class="border rounded-lg p-4">
@@ -42,18 +42,17 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { computed } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../stores/auth";
 
-const router = useRouter()
-const authStore = useAuthStore()
+const router = useRouter();
+const authStore = useAuthStore();
 
-const user = computed(() => authStore.user)
+const user = computed(() => authStore.user);
 
 function handleLogout() {
-  authStore.logout()
-  router.push('/')
+  authStore.logout();
+  router.push("/");
 }
 </script>
-

@@ -6,21 +6,22 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
-import { useAuthStore } from './stores/auth'
-import { Toaster } from '@/components/ui/toast'
+import { onMounted } from "vue";
+import { useAuthStore } from "./stores/auth";
+import { Toaster } from "@/components/ui/toast";
 
-const authStore = useAuthStore()
+const authStore = useAuthStore();
 
 onMounted(() => {
   // TODO: Initialize Firebase auth listener
   // This will check if user is already logged in
-  console.log('App initialized')
-})
+  console.log("App initialized");
+});
 </script>
 
 <style>
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;

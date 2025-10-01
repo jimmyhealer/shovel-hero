@@ -1,34 +1,34 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
 
-export const useAuthStore = defineStore('auth', () => {
+export const useAuthStore = defineStore("auth", () => {
   // State
-  const user = ref(null)
-  const isAuthenticated = ref(false)
-  const isAdmin = ref(false)
+  const user = ref(null);
+  const isAuthenticated = ref(false);
+  const isAdmin = ref(false);
 
   // Computed
   const userRole = computed(() => {
-    if (!user.value) return null
-    return user.value.role || 'visitor'
-  })
+    if (!user.value) return null;
+    return user.value.role || "visitor";
+  });
 
   // Actions
   function setUser(userData) {
-    user.value = userData
-    isAuthenticated.value = !!userData
-    isAdmin.value = userData?.role === 'admin' || userData?.role === 'staff'
+    user.value = userData;
+    isAuthenticated.value = !!userData;
+    isAdmin.value = userData?.role === "admin" || userData?.role === "staff";
   }
 
   function logout() {
-    user.value = null
-    isAuthenticated.value = false
-    isAdmin.value = false
+    user.value = null;
+    isAuthenticated.value = false;
+    isAdmin.value = false;
   }
 
   // TODO: Implement Firebase auth integration
   async function loginWithGoogle() {
-    console.log('Login with Google - to be implemented')
+    console.log("Login with Google - to be implemented");
   }
 
   return {
@@ -38,7 +38,6 @@ export const useAuthStore = defineStore('auth', () => {
     userRole,
     setUser,
     logout,
-    loginWithGoogle
-  }
-})
-
+    loginWithGoogle,
+  };
+});

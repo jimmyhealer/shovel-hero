@@ -35,7 +35,7 @@ const emits = defineEmits([
 const forwarded = useForwardPropsEmits(props, emits);
 
 // 提供 direction 給子組件
-provide('drawerDirection', props.direction || 'bottom');
+provide("drawerDirection", props.direction || "bottom");
 </script>
 
 <template>

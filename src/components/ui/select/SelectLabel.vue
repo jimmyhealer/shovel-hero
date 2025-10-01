@@ -1,7 +1,6 @@
 <script setup>
+import { SelectLabel } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { Label } from "@/components/ui/label";
-import { useFormField } from "./useFormField";
 
 const props = defineProps({
   for: { type: String, required: false },
@@ -9,15 +8,10 @@ const props = defineProps({
   as: { type: null, required: false },
   class: { type: null, required: false },
 });
-
-const { error, formItemId } = useFormField();
 </script>
 
 <template>
-  <Label
-    :class="cn(error && 'text-destructive', props.class)"
-    :for="formItemId"
-  >
+  <SelectLabel :class="cn('px-2 py-1.5 text-sm font-semibold', props.class)">
     <slot />
-  </Label>
+  </SelectLabel>
 </template>

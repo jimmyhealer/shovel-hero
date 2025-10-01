@@ -1,11 +1,9 @@
 <script setup>
 import { reactiveOmit } from "@vueuse/core";
-import { ToastViewport } from "reka-ui";
+import { SelectSeparator } from "reka-ui";
 import { cn } from "@/lib/utils";
 
 const props = defineProps({
-  hotkey: { type: Array, required: false },
-  label: { type: [String, Function], required: false },
   asChild: { type: Boolean, required: false },
   as: { type: null, required: false },
   class: { type: null, required: false },
@@ -15,13 +13,8 @@ const delegatedProps = reactiveOmit(props, "class");
 </script>
 
 <template>
-  <ToastViewport
+  <SelectSeparator
     v-bind="delegatedProps"
-    :class="
-      cn(
-        'fixed top-0 z-[9999] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]',
-        props.class,
-      )
-    "
+    :class="cn('-mx-1 my-1 h-px bg-muted', props.class)"
   />
 </template>

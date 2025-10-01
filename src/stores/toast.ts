@@ -1,45 +1,51 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { defineStore } from "pinia";
+import { ref } from "vue";
 
-export const useToastStore = defineStore('toast', () => {
-  const toasts = ref<Array<{
-    id: number
-    type: 'success' | 'error' | 'info' | 'warning'
-    message: string
-  }>>([])
-  
-  let nextId = 1
+export const useToastStore = defineStore("toast", () => {
+  const toasts = ref<
+    Array<{
+      id: number;
+      type: "success" | "error" | "info" | "warning";
+      message: string;
+    }>
+  >([]);
 
-  function show(type: 'success' | 'error' | 'info' | 'warning', message: string, duration = 3000) {
-    const id = nextId++
-    toasts.value.push({ id, type, message })
-    
+  let nextId = 1;
+
+  function show(
+    type: "success" | "error" | "info" | "warning",
+    message: string,
+    duration = 3000,
+  ) {
+    const id = nextId++;
+    toasts.value.push({ id, type, message });
+
     // 自動移除 toast
     setTimeout(() => {
-      remove(id)
-    }, duration)
+      remove(id);
+    }, duration);
   }
 
   function success(message: string, duration?: number) {
-    show('success', message, duration)
+    show("success", message, duration);
   }
 
   function error(message: string, duration?: number) {
-    show('error', message, duration)
+    show("error", message, duration);
   }
 
   function info(message: string, duration?: number) {
-    show('info', message, duration)
+    show("info", message, duration);
   }
 
   function warning(message: string, duration?: number) {
-    show('warning', message, duration)
+    show("warning", message, duration);
   }
 
   function remove(id: number) {
-    const index = toasts.value.findIndex(t => t.id === id)
+    const index = toasts.value.findIndex((t) => t.id === id);
     if (index > -1) {
-      toasts.value.splice(index, 1)
+      toasts.value.splice(index, 1);
     }
   }
 
@@ -50,7 +56,6 @@ export const useToastStore = defineStore('toast', () => {
     error,
     info,
     warning,
-    remove
-  }
-})
-
+    remove,
+  };
+});

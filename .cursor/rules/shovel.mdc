@@ -86,3 +86,4 @@ Shovel Heroes 2.0（鏟子英雄 2.0）— Cursor 專案規則
 
 技術
 - 使用 TypesScript。
+- 需要注意 z-index 因為有 地圖、Drawer、Toast 等關係。參考 @Z_INDEX_LAYERS.md。
