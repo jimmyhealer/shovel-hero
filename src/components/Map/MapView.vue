@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from "vue";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useMapStore } from "../../stores/map";
+import { mockDemands } from "../../mockData";
 
 const emit = defineEmits(["marker-click"]);
 const mapStore = useMapStore();
@@ -32,12 +33,11 @@ const markerColors = {
 
 // 定義不同類型的圖標 SVG
 const typeIcons = {
-  human: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 2l-4.5 4.5"/><path d="M21 3l-3 3"/></svg>`,
-  supply: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="7.5,4.27 12,6.11 16.5,4.27"/><polyline points="7.5,8.73 7.5,12.14"/><polyline points="16.5,8.73 16.5,12.14"/><polyline points="12,13.46 12,9.05"/></svg>`,
-  "site-holding": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
-  "site-parking": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/></svg>`,
-  "site-stay": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>`,
-  "site-food": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>`,
+  supply: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package-icon lucide-package"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><polyline points="3.29 7 12 12 20.71 7"/><path d="m7.5 4.27 9 5.15"/></svg>`,
+  "site-holding": `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-construction-icon lucide-construction"><rect x="2" y="6" width="20" height="8" rx="1"/><path d="M17 14v7"/><path d="M7 14v7"/><path d="M17 3v3"/><path d="M7 3v3"/><path d="M10 14 2.3 6.3"/><path d="m14 6 7.7 7.7"/><path d="m8 6 8 8"/></svg>`,
+  "site-parking": `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-parking-icon lucide-circle-parking"><circle cx="12" cy="12" r="10"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>`,
+  "site-stay": `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-house-icon lucide-house"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`,
+  "site-food": `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-utensils-icon lucide-utensils"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>`,
 };
 
 // 創建自定義圖標
@@ -79,8 +79,8 @@ function createCustomIcon(demand) {
     content = `
       <div style="
         background-color: ${color};
-        width: 30px;
-        height: 30px;
+        width: 36px;
+        height: 36px;
         border-radius: 50% 50% 50% 0;
         border: 3px solid white;
         transform: rotate(-45deg);
@@ -89,7 +89,9 @@ function createCustomIcon(demand) {
         align-items: center;
         justify-content: center;
       ">
-        ${iconSvg}
+        <div style="transform: rotate(45deg);">
+          ${iconSvg}
+        </div>
       </div>
     `;
   }
@@ -120,49 +122,6 @@ onMounted(() => {
 });
 
 async function loadDemands() {
-  // TODO: 從 Firestore 載入真實資料
-  // 這裡先使用模擬資料
-  const mockDemands = [
-    {
-      id: "1",
-      type: "human",
-      description: "需要志工協助清理受災區域的淤泥和垃圾",
-      location: { lat: 23.5, lng: 121.0, address: "花蓮縣某區某街" },
-      contact: { name: "張先生", phone: "0912-345-678" },
-      humanNeed: { required: 20, riskNotes: "請穿著防滑鞋，注意地面濕滑" },
-      appliedCount: 5,
-      status: "approved",
-    },
-    {
-      id: "2",
-      type: "supply",
-      description: "災區急需各種民生物資",
-      location: { lat: 23.6, lng: 121.1, address: "花蓮縣某鄉某村" },
-      contact: { name: "李小姐", phone: "0923-456-789" },
-      supplyItems: [
-        { itemName: "飲用水", quantity: 100, unit: "箱" },
-        { itemName: "泡麵", quantity: 200, unit: "箱" },
-        { itemName: "罐頭食品", quantity: 50, unit: "箱" },
-        { itemName: "衛生紙", quantity: 30, unit: "箱" },
-      ],
-      status: "approved",
-    },
-    {
-      id: "3",
-      type: "supply",
-      description: "學校急需清潔用品",
-      location: { lat: 23.55, lng: 121.05, address: "花蓮縣某國小" },
-      contact: { name: "王校長", phone: "0934-567-890" },
-      supplyItems: [
-        { itemName: "漂白水", quantity: 20, unit: "瓶" },
-        { itemName: "掃把", quantity: 50, unit: "支" },
-        { itemName: "拖把", quantity: 50, unit: "支" },
-        { itemName: "垃圾袋", quantity: 100, unit: "包" },
-      ],
-      status: "approved",
-    },
-  ];
-
   mapStore.setDemands(mockDemands);
   updateMarkers();
 }
