@@ -25,6 +25,7 @@ import {
 } from "lucide-vue-next";
 import { useVolunteerFormStore } from "@/stores/forms";
 import { useToastStore } from "@/stores/toast";
+import { createVolunteerApplication } from "@/services";
 
 const props = defineProps({
   open: Boolean,
@@ -71,6 +72,11 @@ async function handleSubmit() {
     return;
   }
 
+  if (!props.demandId) {
+    toastStore.error("缺少需求 ID");
+    return;
+  }
+
   isSubmitting.value = true;
 
   try {
@@ -90,16 +96,18 @@ async function handleSubmit() {
         .split(",")
         .map((t) => t.trim())
         .filter((t) => t),
-      note: formData.value.note.trim(),
-      status: "pending",
-      createdAt: new Date().toISOString(),
+      note: formData.value.note?.trim() || "",
     };
 
-    emit("submit", submitData);
+    // 呼叫 Firestore 服務建立志工報名
+    // publishTime 會自動設為 now + 2 小時
+    const applicationId = await createVolunteerApplication(submitData);
+
+    toastStore.success("報名成功！審核時間最長 2 小時。");
+    console.log("志工報名已建立，ID:", applicationId);
 
     // 提交成功後清除表單
     formStore.reset();
-    toastStore.success("報名成功！");
 
     emit("update:open", false);
   } catch (err) {
@@ -115,7 +123,6 @@ async function handleSubmit() {
   <Dialog :open="open" @update:open="emit('update:open', $event)">
     <DialogContent
       class="sm:max-w-[500px] h-[85vh] flex flex-col p-0"
-      data-vaul-no-drag
     >
       <DialogHeader class="px-6 pt-6 pb-4 border-b">
         <DialogTitle>我要報名志工</DialogTitle>

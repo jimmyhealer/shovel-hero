@@ -1,16 +1,20 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
+import { subscribeToPublishedDemands } from "@/services";
+import type { Demand, DemandType } from "@/types/firestore";
 
 export const useMapStore = defineStore("map", () => {
   // State
-  const selectedDemand = ref(null);
+  const selectedDemand = ref<Demand | null>(null);
   const isPanelOpen = ref(false);
-  const demands = ref([]);
+  const demands = ref<Demand[]>([]);
   const filters = ref({
-    type: null,
+    type: null as DemandType | null,
     status: "approved",
-    region: null,
+    region: null as string | null,
   });
+  const isLoading = ref(false);
+  const unsubscribe = ref<(() => void) | null>(null);
 
   // Computed
   const filteredDemands = computed(() => {
@@ -53,10 +57,38 @@ export const useMapStore = defineStore("map", () => {
   }
 
   // 對齊 SRS：更新現有需求
-  function updateDemand(demandId, updates) {
+  function updateDemand(demandId: string, updates: Partial<Demand>) {
     const index = demands.value.findIndex((d) => d.id === demandId);
     if (index !== -1) {
       demands.value[index] = { ...demands.value[index], ...updates };
+    }
+  }
+
+  // 對齊 SRS：即時監聽 Firestore 資料（只取 publishTime <= now 的需求）
+  function startRealtimeSync() {
+    if (unsubscribe.value) {
+      return; // 已經在監聽中
+    }
+
+    isLoading.value = true;
+
+    unsubscribe.value = subscribeToPublishedDemands(
+      (newDemands) => {
+        demands.value = newDemands;
+        isLoading.value = false;
+      },
+      {
+        type: filters.value.type || undefined,
+        region: filters.value.region || undefined,
+      },
+    );
+  }
+
+  // 停止即時監聽
+  function stopRealtimeSync() {
+    if (unsubscribe.value) {
+      unsubscribe.value();
+      unsubscribe.value = null;
     }
   }
 
@@ -66,11 +98,14 @@ export const useMapStore = defineStore("map", () => {
     demands,
     filters,
     filteredDemands,
+    isLoading,
     selectDemand,
     closePanel,
     setDemands,
     updateFilters,
     addDemand,
     updateDemand,
+    startRealtimeSync,
+    stopRealtimeSync,
   };
 });

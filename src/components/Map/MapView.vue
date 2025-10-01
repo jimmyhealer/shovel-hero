@@ -1,9 +1,8 @@
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useMapStore } from "../../stores/map";
-import { mockDemands } from "../../mockData";
 
 const emit = defineEmits(["marker-click"]);
 const mapStore = useMapStore();
@@ -114,17 +113,14 @@ onMounted(() => {
     maxZoom: 19,
   }).addTo(map);
 
-  map.on("moveend", () => {
-    // TODO: 根據可見範圍載入需求資料
-  });
-
-  loadDemands();
+  // 對齊 SRS：啟動即時監聽 Firestore（只取 publishTime <= now 的資料）
+  mapStore.startRealtimeSync();
 });
 
-async function loadDemands() {
-  mapStore.setDemands(mockDemands);
-  updateMarkers();
-}
+onUnmounted(() => {
+  // 清理：停止監聽 Firestore
+  mapStore.stopRealtimeSync();
+});
 
 // 更新地圖標記
 function updateMarkers() {

@@ -1,7 +1,6 @@
 <script setup>
 // 對齊 SRS：需求建立表單（plan.md 10, 12）
 // 支援：人力需求、物資需求、場站資訊（污泥暫置場、物資停放處、住宿地點、領吃食區域）
-import { ref, computed, watch } from "vue";
 import {
   Dialog,
   DialogContent,
@@ -26,8 +25,6 @@ import {
 } from "@/components/ui/select";
 import {
   UserIcon,
-  PhoneIcon,
-  MailIcon,
   MapPinIcon,
   PackageIcon,
   HashIcon,
@@ -35,272 +32,39 @@ import {
   PlusIcon,
   TrashIcon,
 } from "lucide-vue-next";
-import { useToastStore } from "@/stores/toast";
 import MapPicker from "@/components/Map/MapPicker.vue";
+import { useDemandForm } from "@/hooks/useDemandForm";
 
 const props = defineProps({
   open: Boolean,
-  // 如果提供 initialData，則為編輯模式
-  initialData: {
-    type: Object,
-    default: null,
-  },
+  initialData: Object,
 });
 
 const emit = defineEmits(["update:open", "submit"]);
 
-const toastStore = useToastStore();
+// 使用表單 hook
+const {
+  formData,
+  isSubmitting,
+  errors,
+  showMapPicker,
+  isHumanType,
+  isSupplyType,
+  typeOptions,
+  regionOptions,
+  addSupplyItem,
+  removeSupplyItem,
+  handleSubmit: submitForm,
+  openMapPicker,
+  handleLocationSelect,
+} = useDemandForm(props.initialData);
 
-// 類型選項
-const typeOptions = [
-  { value: "human", label: "人力任務" },
-  { value: "supply", label: "物資需求" },
-  { value: "site-holding", label: "污泥暫置場" },
-  { value: "site-parking", label: "物資停放處" },
-  { value: "site-stay", label: "住宿地點" },
-  { value: "site-food", label: "領吃食區域" },
-];
-
-// 表單資料
-const formData = ref({
-  type: "human",
-  title: "",
-  description: "",
-  region: "",
-  location: {
-    lat: null,
-    lng: null,
-    address: "",
-  },
-  contact: {
-    name: "",
-    phone: "",
-    email: "",
-  },
-  // 人力需求專屬
-  humanNeed: {
-    required: "",
-    riskNotes: "",
-  },
-  // 物資需求專屬（支援多項物資）
-  supplyItems: [{ itemName: "", quantity: "", unit: "" }],
-});
-
-const isSubmitting = ref(false);
-const errors = ref({});
-const showMapPicker = ref(false);
-
-// 當 initialData 變化時，更新表單
-watch(
-  () => props.initialData,
-  (newData) => {
-    if (newData) {
-      formData.value = { ...formData.value, ...newData };
-    }
-  },
-  { immediate: true },
-);
-
-// 計算屬性：是否為場站類型
-const isSiteType = computed(() => {
-  return formData.value.type.startsWith("site-");
-});
-
-// 計算屬性：是否為人力需求
-const isHumanType = computed(() => {
-  return formData.value.type === "human";
-});
-
-// 計算屬性：是否為物資需求
-const isSupplyType = computed(() => {
-  return formData.value.type === "supply";
-});
-
-// 當類型變更時，清空相關欄位
-watch(
-  () => formData.value.type,
-  (newType, oldType) => {
-    if (newType !== oldType) {
-      if (newType !== "human") {
-        formData.value.humanNeed = { required: "", riskNotes: "" };
-      }
-      if (newType !== "supply") {
-        formData.value.supplyItems = [{ itemName: "", quantity: "", unit: "" }];
-      }
-    }
-  },
-);
-
-// 物資項目管理
-function addSupplyItem() {
-  formData.value.supplyItems.push({ itemName: "", quantity: "", unit: "" });
-}
-
-function removeSupplyItem(index) {
-  if (formData.value.supplyItems.length > 1) {
-    formData.value.supplyItems.splice(index, 1);
-  }
-}
-
-// 驗證表單
-function validateForm() {
-  errors.value = {};
-
-  if (!formData.value.type) {
-    errors.value.type = "請選擇類型";
-  }
-
-  if (!formData.value.region.trim()) {
-    errors.value.region = "請輸入所屬災區/區域";
-  }
-
-  if (!formData.value.location.address.trim()) {
-    errors.value.address = "請輸入地點";
-  }
-
-  if (!formData.value.contact.name.trim()) {
-    errors.value.contactName = "請輸入聯絡人姓名";
-  }
-
-  if (!formData.value.contact.phone.trim()) {
-    errors.value.contactPhone = "請輸入聯絡電話";
-  } else if (!/^[0-9-+\s()]+$/.test(formData.value.contact.phone)) {
-    errors.value.contactPhone = "請輸入有效的電話號碼";
-  }
-
-  if (
-    formData.value.contact.email &&
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.value.contact.email)
-  ) {
-    errors.value.contactEmail = "請輸入有效的 Email";
-  }
-
-  // 人力需求驗證
-  if (isHumanType.value) {
-    if (
-      !formData.value.humanNeed.required ||
-      Number(formData.value.humanNeed.required) <= 0
-    ) {
-      errors.value.humanRequired = "請輸入所需人數";
-    }
-  }
-
-  // 物資需求驗證
-  if (isSupplyType.value) {
-    formData.value.supplyItems.forEach((item, index) => {
-      if (!item.itemName.trim()) {
-        errors.value[`supplyItem${index}Name`] = "請輸入物資名稱";
-      }
-      if (!item.quantity || Number(item.quantity) <= 0) {
-        errors.value[`supplyItem${index}Quantity`] = "請輸入數量";
-      }
-      if (!item.unit.trim()) {
-        errors.value[`supplyItem${index}Unit`] = "請輸入單位";
-      }
-    });
-  }
-
-  return Object.keys(errors.value).length === 0;
-}
-
-// 提交表單
+// 包裝提交函數以處理 emit
 async function handleSubmit() {
-  if (!validateForm()) {
-    toastStore.error("請檢查表單內容");
-    return;
-  }
-
-  isSubmitting.value = true;
-
-  try {
-    // 對齊 SRS：demands 資料結構（plan.md 10）
-    const submitData = {
-      type: formData.value.type,
-      title: formData.value.title.trim(),
-      description: formData.value.description.trim(),
-      region: formData.value.region.trim(),
-      location: {
-        lat: formData.value.location.lat,
-        lng: formData.value.location.lng,
-        address: formData.value.location.address.trim(),
-      },
-      contact: {
-        name: formData.value.contact.name.trim(),
-        phone: formData.value.contact.phone.trim(),
-        email: formData.value.contact.email.trim(),
-      },
-      status: "pending", // 對齊 SRS：新建需求狀態為 pending，等待審核
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      autoApproved: false,
-    };
-
-    // 根據類型添加專屬欄位
-    if (isHumanType.value) {
-      submitData.humanNeed = {
-        required: Number(formData.value.humanNeed.required),
-        riskNotes: formData.value.humanNeed.riskNotes.trim(),
-      };
-    } else if (isSupplyType.value) {
-      submitData.supplyItems = formData.value.supplyItems.map((item) => ({
-        itemName: item.itemName.trim(),
-        quantity: Number(item.quantity),
-        unit: item.unit.trim(),
-      }));
-    }
-
-    emit("submit", submitData);
-
-    // 清空表單
-    resetForm();
-
+  const success = await submitForm();
+  if (success) {
     emit("update:open", false);
-  } catch (err) {
-    console.error("提交失敗:", err);
-    toastStore.error("提交失敗，請稍後再試");
-  } finally {
-    isSubmitting.value = false;
   }
-}
-
-// 重置表單
-function resetForm() {
-  formData.value = {
-    type: "human",
-    description: "",
-    region: "",
-    location: {
-      lat: null,
-      lng: null,
-      address: "",
-    },
-    contact: {
-      name: "",
-      phone: "",
-      email: "",
-    },
-    humanNeed: {
-      required: "",
-      riskNotes: "",
-    },
-    supplyItems: [{ itemName: "", quantity: "", unit: "" }],
-  };
-  errors.value = {};
-}
-
-// 開啟地圖選點
-function openMapPicker() {
-  showMapPicker.value = true;
-}
-
-// 處理地圖選點結果
-function handleLocationSelect(location) {
-  formData.value.location = {
-    lat: location.lat,
-    lng: location.lng,
-    address: location.address,
-  };
-  toastStore.success("已選擇地點");
 }
 </script>
 
@@ -349,12 +113,22 @@ function handleLocationSelect(location) {
             <Label for="region" class="flex items-center gap-2">
               所屬災區/區域 <span class="text-red-500">*</span>
             </Label>
-            <Input
-              id="region"
-              v-model="formData.region"
-              placeholder="例：台南市、高雄市旗山區"
-              :class="{ 'border-red-500': errors.region }"
-            />
+            <Select v-model="formData.region">
+              <SelectTrigger :class="{ 'border-red-500': errors.region }">
+                <SelectValue placeholder="請選擇區域" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem
+                    v-for="region in regionOptions"
+                    :key="region.value"
+                    :value="region.value"
+                  >
+                    {{ region.label }}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             <p v-if="errors.region" class="text-sm text-red-500">
               {{ errors.region }}
             </p>

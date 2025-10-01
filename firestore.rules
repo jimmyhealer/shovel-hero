@@ -1,0 +1,271 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========== 輔助函數 ==========
+    
+    // 檢查是否為已登入的管理員
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'] &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.disabled == false;
+    }
+    
+    // 檢查是否為已登入使用者
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // 檢查 publishTime 是否已經到了（審核機制核心）
+    function isPublished(data) {
+      return data.publishTime <= request.time;
+    }
+    
+    // 驗證字串長度
+    function validateStringLength(str, maxLength) {
+      return str is string && str.size() <= maxLength;
+    }
+    
+    // 驗證電話格式（基本檢查）
+    function validatePhone(phone) {
+      return phone is string && 
+             phone.size() >= 8 && 
+             phone.size() <= 20 &&
+             phone.matches('^[0-9+\\-()\\s]+$');
+    }
+    
+    // 驗證 Email 格式
+    function validateEmail(email) {
+      return email is string && email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+    }
+    
+    // ========== Users 集合（管理員資料）==========
+    
+    match /users/{userId} {
+      // 只有管理員可讀取所有使用者
+      allow read: if isAdmin();
+      
+      // 只有系統管理員可建立/更新使用者（通常由 Functions 處理）
+      allow create, update: if isAdmin() && request.auth.uid == userId;
+      
+      // 禁止刪除使用者（使用 disabled 欄位代替）
+      allow delete: if false;
+    }
+    
+    // ========== Demands 需求集合 ==========
+    
+    match /demands/{demandId} {
+      // 讀取：訪客可讀取已發布（publishTime <= now）且已審核通過的需求
+      allow read: if isPublished(resource.data) && resource.data.status == 'approved';
+      
+      // 管理員可讀取所有需求
+      allow read: if isAdmin();
+      
+      // 建立：訪客可建立需求（對齊 SRS：訪客可提交需求）
+      allow create: if 
+        // 基本欄位驗證
+        request.resource.data.keys().hasAll(['type', 'region', 'location', 'contact', 'status', 'createdAt', 'updatedAt', 'publishTime', 'autoApproved']) &&
+        request.resource.data.type in ['human', 'supply', 'site-holding', 'site-parking', 'site-stay', 'site-food'] &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.autoApproved == false &&
+        
+        // publishTime = now + 30 分鐘（對齊需求）
+        request.resource.data.publishTime == request.time + duration.value(30, 'm') &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time &&
+        
+        // 驗證 region
+        validateStringLength(request.resource.data.region, 100) &&
+        
+        // 驗證 location
+        request.resource.data.location.keys().hasAll(['lat', 'lng', 'address']) &&
+        request.resource.data.location.lat is number &&
+        request.resource.data.location.lng is number &&
+        validateStringLength(request.resource.data.location.address, 300) &&
+        
+        // 驗證 contact
+        request.resource.data.contact.keys().hasAll(['name', 'phone']) &&
+        validateStringLength(request.resource.data.contact.name, 100) &&
+        validatePhone(request.resource.data.contact.phone) &&
+        (!request.resource.data.contact.keys().hasAny(['email']) || validateEmail(request.resource.data.contact.email)) &&
+        
+        // 驗證 description（選填）
+        (!request.resource.data.keys().hasAny(['description']) || validateStringLength(request.resource.data.description, 2000)) &&
+        
+        // 根據類型驗證專屬欄位
+        (
+          // human 類型：需要 humanNeed
+          (request.resource.data.type == 'human' && 
+           request.resource.data.keys().hasAll(['humanNeed']) &&
+           request.resource.data.humanNeed.required is int &&
+           request.resource.data.humanNeed.required > 0 &&
+           validateStringLength(request.resource.data.humanNeed.riskNotes, 1000))
+          ||
+          // supply 類型：需要 supplyItems
+          (request.resource.data.type == 'supply' && 
+           request.resource.data.keys().hasAll(['supplyItems']) &&
+           request.resource.data.supplyItems is list &&
+           request.resource.data.supplyItems.size() > 0 &&
+           request.resource.data.supplyItems.size() <= 20)
+          ||
+          // site 類型：不需要額外欄位
+          (request.resource.data.type in ['site-holding', 'site-parking', 'site-stay', 'site-food'])
+        );
+      
+      // 更新：只有管理員可更新（審核、編輯、下架）
+      allow update: if isAdmin();
+      
+      // 刪除：只有管理員可刪除
+      allow delete: if isAdmin();
+    }
+    
+    // ========== Volunteer Applications 志工報名 ==========
+    
+    match /volunteerApplications/{applicationId} {
+      // 讀取：已發布且已審核通過的可被訪客看到
+      allow read: if isPublished(resource.data) && resource.data.status == 'approved';
+      
+      // 管理員可讀取所有報名
+      allow read: if isAdmin();
+      
+      // 建立：訪客可建立報名（對齊 SRS：訪客可報名）
+      allow create: if 
+        request.resource.data.keys().hasAll(['demandId', 'applicant', 'availableTime', 'skills', 'tools', 'status', 'createdAt', 'publishTime', 'autoApproved']) &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.autoApproved == false &&
+        
+        // publishTime = now + 2 小時（對齊需求）
+        request.resource.data.publishTime == request.time + duration.value(2, 'h') &&
+        request.resource.data.createdAt == request.time &&
+        
+        // 驗證 demandId 存在
+        exists(/databases/$(database)/documents/demands/$(request.resource.data.demandId)) &&
+        
+        // 驗證 applicant
+        request.resource.data.applicant.keys().hasAll(['name', 'phone']) &&
+        validateStringLength(request.resource.data.applicant.name, 100) &&
+        validatePhone(request.resource.data.applicant.phone) &&
+        
+        // 驗證 availableTime
+        validateStringLength(request.resource.data.availableTime, 200) &&
+        
+        // 驗證 skills 和 tools（陣列）
+        request.resource.data.skills is list &&
+        request.resource.data.skills.size() <= 20 &&
+        request.resource.data.tools is list &&
+        request.resource.data.tools.size() <= 20 &&
+        
+        // 驗證 note（選填）
+        (!request.resource.data.keys().hasAny(['note']) || validateStringLength(request.resource.data.note, 1000));
+      
+      // 更新：只有管理員可更新（審核）
+      allow update: if isAdmin();
+      
+      // 刪除：只有管理員可刪除
+      allow delete: if isAdmin();
+    }
+    
+    // ========== Donations 物資捐贈 ==========
+    
+    match /donations/{donationId} {
+      // 讀取：已發布且已審核通過的可被訪客看到
+      allow read: if isPublished(resource.data) && resource.data.status == 'approved';
+      
+      // 管理員可讀取所有捐贈
+      allow read: if isAdmin();
+      
+      // 建立：訪客可建立捐贈（對齊 SRS：訪客可捐贈）
+      allow create: if 
+        request.resource.data.keys().hasAll(['demandId', 'donor', 'itemName', 'quantity', 'unit', 'status', 'createdAt', 'publishTime', 'autoApproved']) &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.autoApproved == false &&
+        
+        // publishTime = now + 2 小時（對齊需求）
+        request.resource.data.publishTime == request.time + duration.value(2, 'h') &&
+        request.resource.data.createdAt == request.time &&
+        
+        // 驗證 demandId 存在
+        exists(/databases/$(database)/documents/demands/$(request.resource.data.demandId)) &&
+        
+        // 驗證 donor
+        request.resource.data.donor.keys().hasAll(['name', 'phone']) &&
+        validateStringLength(request.resource.data.donor.name, 100) &&
+        validatePhone(request.resource.data.donor.phone) &&
+        
+        // 驗證物資資訊
+        validateStringLength(request.resource.data.itemName, 200) &&
+        request.resource.data.quantity is number &&
+        request.resource.data.quantity > 0 &&
+        validateStringLength(request.resource.data.unit, 50) &&
+        
+        // 驗證 eta 和 note（選填）
+        (!request.resource.data.keys().hasAny(['eta']) || validateStringLength(request.resource.data.eta, 200)) &&
+        (!request.resource.data.keys().hasAny(['note']) || validateStringLength(request.resource.data.note, 1000));
+      
+      // 更新：只有管理員可更新（審核）
+      allow update: if isAdmin();
+      
+      // 刪除：只有管理員可刪除
+      allow delete: if isAdmin();
+    }
+    
+    // ========== Comments 留言 ==========
+    
+    match /comments/{commentId} {
+      // 讀取：所有人可讀取未被移除的留言
+      allow read: if resource.data.removed == false;
+      
+      // 管理員可讀取所有留言（包括已移除）
+      allow read: if isAdmin();
+      
+      // 建立：所有人可建立留言
+      allow create: if 
+        request.resource.data.keys().hasAll(['demandId', 'author', 'body', 'createdAt', 'removed']) &&
+        request.resource.data.removed == false &&
+        request.resource.data.createdAt == request.time &&
+        exists(/databases/$(database)/documents/demands/$(request.resource.data.demandId)) &&
+        validateStringLength(request.resource.data.author.displayName, 100) &&
+        validateStringLength(request.resource.data.body, 2000);
+      
+      // 更新：只有管理員可更新（移除留言）
+      allow update: if isAdmin() && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['removed', 'removedBy']);
+      
+      // 刪除：只有管理員可刪除
+      allow delete: if isAdmin();
+    }
+    
+    // ========== Approvals 審核紀錄 ==========
+    
+    match /approvals/{approvalId} {
+      // 讀取：只有管理員可讀取
+      allow read: if isAdmin();
+      
+      // 建立/更新/刪除：由 Cloud Functions 處理，禁止直接操作
+      allow write: if false;
+    }
+    
+    // ========== Notifications 通知 ==========
+    
+    match /notifications/{notificationId} {
+      // 讀取：只有管理員可讀取
+      allow read: if isAdmin();
+      
+      // 建立/更新/刪除：由 Cloud Functions 處理，禁止直接操作
+      allow write: if false;
+    }
+    
+    // ========== Audit Logs 稽核紀錄 ==========
+    
+    match /auditLogs/{logId} {
+      // 讀取：只有管理員可讀取
+      allow read: if isAdmin();
+      
+      // 建立/更新/刪除：由 Cloud Functions 處理，禁止直接操作
+      allow write: if false;
+    }
+  }
+}
+

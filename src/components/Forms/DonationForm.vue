@@ -26,6 +26,7 @@ import {
 } from "lucide-vue-next";
 import { useDonationFormStore } from "@/stores/forms";
 import { useToastStore } from "@/stores/toast";
+import { createDonation } from "@/services";
 
 const props = defineProps({
   open: Boolean,
@@ -86,6 +87,11 @@ async function handleSubmit() {
     return;
   }
 
+  if (!props.demandId) {
+    toastStore.error("缺少需求 ID");
+    return;
+  }
+
   isSubmitting.value = true;
 
   try {
@@ -99,17 +105,19 @@ async function handleSubmit() {
       itemName: formData.value.itemName.trim(),
       quantity: Number(formData.value.quantity),
       unit: formData.value.unit.trim(),
-      eta: formData.value.eta.trim(),
-      note: formData.value.note.trim(),
-      status: "pending",
-      createdAt: new Date().toISOString(),
+      eta: formData.value.eta?.trim() || "",
+      note: formData.value.note?.trim() || "",
     };
 
-    emit("submit", submitData);
+    // 呼叫 Firestore 服務建立物資捐贈
+    // publishTime 會自動設為 now + 2 小時
+    const donationId = await createDonation(submitData);
+
+    toastStore.success("捐贈登記成功！審核時間最長 2 小時。");
+    console.log("物資捐贈已建立，ID:", donationId);
 
     // 提交成功後清除表單
     formStore.reset();
-    toastStore.success("捐贈登記成功！");
 
     emit("update:open", false);
   } catch (err) {
