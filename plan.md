@@ -103,14 +103,13 @@
   - contact: {name, phone, email}
   - humanNeed: {required, riskNotes}?（type=human 時）
   - supplyNeed: {itemName, quantity, unit}?（type=supply 時）
-  - status: draft|pending|approved|rejected|archived
-  - createdBy, createdAt, updatedAt, approvedAt, approvedBy, autoApproved: boolean
+  - createdBy, createdAt, updatedAt, approvedAt, approvedBy
 - `volunteerApplications`
   - id, demandId, applicant: {name, phone}, availableTime, skills[], tools[], note
-  - status: pending|approved|rejected, createdAt, reviewedAt, reviewedBy, autoApproved
+  - createdAt, reviewedAt, reviewedBy
 - `donations`
   - id, demandId, donor: {name, phone}, itemName, quantity, unit, eta, note
-  - status: pending|approved|rejected, createdAt, reviewedAt, reviewedBy, autoApproved
+  - createdAt, reviewedAt, reviewedBy
 - `comments`（子集合或獨立集合，與 demandId 關聯）
   - id, demandId, author: {displayName}, body, createdAt, removed: boolean, removedBy
 - `approvals`

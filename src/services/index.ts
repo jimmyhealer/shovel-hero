@@ -18,17 +18,18 @@ export {
 // Volunteer Applications 志工報名服務
 export {
   createVolunteerApplication,
-  updateVolunteerApplication,
   getVolunteerApplicationsByDemand,
   getAllVolunteerApplications,
+  subscribeVolunteerApplicationCount,
 } from "./volunteerApplications";
 
 // Donations 物資捐贈服務
 export {
   createDonation,
-  updateDonation,
   getDonationsByDemand,
   getAllDonations,
+  subscribeDonationCount,
+  subscribeDonationsByDemand,
 } from "./donations";
 
 // Comments 留言服務

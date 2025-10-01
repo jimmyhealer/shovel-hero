@@ -16,29 +16,27 @@ import {
   Timestamp,
   type Query,
   type DocumentData,
+  onSnapshot,
+  type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "@/config/firebase";
 import type { VolunteerApplication } from "@/types/firestore";
 
 /**
- * 建立志工報名
- * 對齊 SRS：publishTime = now + 2 小時
+ * 建立志工報名（立即公開）
  */
 export async function createVolunteerApplication(
   data: Omit<
     VolunteerApplication,
-    "id" | "status" | "createdAt" | "publishTime" | "autoApproved"
+    "id" | "createdAt" | "publishTime"
   >,
 ): Promise<string> {
   const now = Timestamp.now();
-  const publishTime = Timestamp.fromMillis(now.toMillis() + 2 * 60 * 60 * 1000); // +2 小時
-
+  // 立即可見：publishTime 設為現在
   const applicationData = {
     ...data,
-    status: "pending",
     createdAt: now,
-    publishTime,
-    autoApproved: false,
+    publishTime: now,
   };
 
   const docRef = await addDoc(
@@ -49,31 +47,17 @@ export async function createVolunteerApplication(
 }
 
 /**
- * 更新志工報名狀態（管理員專用）
- */
-export async function updateVolunteerApplication(
-  applicationId: string,
-  data: Partial<VolunteerApplication>,
-): Promise<void> {
-  const appRef = doc(db, "volunteerApplications", applicationId);
-  await updateDoc(appRef, data);
-}
-
-/**
  * 取得需求的志工報名列表
  */
 export async function getVolunteerApplicationsByDemand(
   demandId: string,
 ): Promise<VolunteerApplication[]> {
-  const now = Timestamp.now();
   const appsRef = collection(db, "volunteerApplications");
 
   const q = query(
     appsRef,
     where("demandId", "==", demandId),
-    where("publishTime", "<=", now),
-    where("status", "==", "approved"),
-    orderBy("publishTime", "desc"),
+    orderBy("createdAt", "desc"),
   );
 
   const snapshot = await getDocs(q);
@@ -87,19 +71,28 @@ export async function getVolunteerApplicationsByDemand(
 }
 
 /**
+ * 即時監聽某需求的志工報名數量
+ */
+export function subscribeVolunteerApplicationCount(
+  demandId: string,
+  callback: (count: number) => void,
+): Unsubscribe {
+  const appsRef = collection(db, "volunteerApplications");
+  const q = query(appsRef, where("demandId", "==", demandId));
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.size);
+  });
+}
+
+/**
  * 查詢所有志工報名（管理員視角）
  */
 export async function getAllVolunteerApplications(filters?: {
-  status?: string;
   demandId?: string;
 }): Promise<VolunteerApplication[]> {
   const appsRef = collection(db, "volunteerApplications");
 
   let q: Query<DocumentData> = query(appsRef, orderBy("createdAt", "desc"));
-
-  if (filters?.status) {
-    q = query(q, where("status", "==", filters.status));
-  }
 
   if (filters?.demandId) {
     q = query(q, where("demandId", "==", filters.demandId));

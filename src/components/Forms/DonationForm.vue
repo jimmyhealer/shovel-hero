@@ -32,7 +32,7 @@ const props = defineProps({
   open: Boolean,
   demandId: String,
   demandTitle: String,
-  supplyItems: Array, // 從需求帶入的物資清單
+  supplyItems: Array, // 從需求帶入的物資清單（可為剩餘清單）
 });
 
 const emit = defineEmits(["update:open", "submit"]);
@@ -64,12 +64,10 @@ function validateForm() {
     errors.value.itemName = "請輸入物資名稱";
   }
 
-  if (!formData.value.quantity.trim()) {
+  const quantityStr = String(formData.value.quantity ?? "").trim();
+  if (!quantityStr) {
     errors.value.quantity = "請輸入數量";
-  } else if (
-    isNaN(formData.value.quantity) ||
-    Number(formData.value.quantity) <= 0
-  ) {
+  } else if (isNaN(Number(quantityStr)) || Number(quantityStr) <= 0) {
     errors.value.quantity = "請輸入有效的數量";
   }
 
@@ -96,6 +94,7 @@ async function handleSubmit() {
 
   try {
     // 對齊 SRS：donations 資料結構
+    const quantityStr = String(formData.value.quantity ?? "").trim();
     const submitData = {
       demandId: props.demandId,
       donor: {
@@ -103,17 +102,16 @@ async function handleSubmit() {
         phone: formData.value.phone.trim(),
       },
       itemName: formData.value.itemName.trim(),
-      quantity: Number(formData.value.quantity),
+      quantity: Number(quantityStr),
       unit: formData.value.unit.trim(),
       eta: formData.value.eta?.trim() || "",
       note: formData.value.note?.trim() || "",
     };
 
-    // 呼叫 Firestore 服務建立物資捐贈
-    // publishTime 會自動設為 now + 2 小時
+    // 呼叫 Firestore 服務建立物資捐贈（立即顯示）
     const donationId = await createDonation(submitData);
 
-    toastStore.success("捐贈登記成功！審核時間最長 2 小時。");
+    toastStore.success("捐贈登記成功！已公開顯示。");
     console.log("物資捐贈已建立，ID:", donationId);
 
     // 提交成功後清除表單

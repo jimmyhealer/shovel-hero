@@ -18,7 +18,7 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // 檢查 publishTime 是否已經到了（審核機制核心）
+    // 檢查 publishTime 是否已經到了（目前策略：志工與捐贈立即公開）
     function isPublished(data) {
       return data.publishTime <= request.time;
     }
@@ -58,19 +58,17 @@ service cloud.firestore {
     
     match /demands/{demandId} {
       // 讀取：訪客可讀取已發布（publishTime <= now）且已審核通過的需求
-      allow read: if isPublished(resource.data) && resource.data.status == 'approved';
+      allow read: if isPublished(resource.data);
       
       // 管理員可讀取所有需求
       allow read: if isAdmin();
       
       // 建立：訪客可建立需求（對齊 SRS：訪客可提交需求）
-      allow create: if 
+      allow create: if
         // 基本欄位驗證
-        request.resource.data.keys().hasAll(['type', 'region', 'location', 'contact', 'status', 'createdAt', 'updatedAt', 'publishTime', 'autoApproved']) &&
+        request.resource.data.keys().hasAll(['type', 'region', 'location', 'contact', 'createdAt', 'updatedAt', 'publishTime']) &&
         request.resource.data.type in ['human', 'supply', 'site-holding', 'site-parking', 'site-stay', 'site-food'] &&
-        request.resource.data.status == 'pending' &&
-        request.resource.data.autoApproved == false &&
-        
+
         // publishTime = now + 30 分鐘（對齊需求）
         request.resource.data.publishTime == request.time + duration.value(30, 'm') &&
         request.resource.data.createdAt == request.time &&
@@ -124,20 +122,18 @@ service cloud.firestore {
     // ========== Volunteer Applications 志工報名 ==========
     
     match /volunteerApplications/{applicationId} {
-      // 讀取：已發布且已審核通過的可被訪客看到
-      allow read: if isPublished(resource.data) && resource.data.status == 'approved';
+      // 讀取：所有訪客可讀取（立即公開）
+      allow read: if true;
       
       // 管理員可讀取所有報名
       allow read: if isAdmin();
       
-      // 建立：訪客可建立報名（對齊 SRS：訪客可報名）
-      allow create: if 
-        request.resource.data.keys().hasAll(['demandId', 'applicant', 'availableTime', 'skills', 'tools', 'status', 'createdAt', 'publishTime', 'autoApproved']) &&
-        request.resource.data.status == 'pending' &&
-        request.resource.data.autoApproved == false &&
-        
-        // publishTime = now + 2 小時（對齊需求）
-        request.resource.data.publishTime == request.time + duration.value(2, 'h') &&
+      // 建立：訪客可建立報名（立即公開）
+      allow create: if
+        request.resource.data.keys().hasAll(['demandId', 'applicant', 'availableTime', 'skills', 'tools', 'createdAt', 'publishTime']) &&
+
+        // 立即公開：publishTime == now
+        request.resource.data.publishTime == request.time &&
         request.resource.data.createdAt == request.time &&
         
         // 驗證 demandId 存在
@@ -170,20 +166,18 @@ service cloud.firestore {
     // ========== Donations 物資捐贈 ==========
     
     match /donations/{donationId} {
-      // 讀取：已發布且已審核通過的可被訪客看到
-      allow read: if isPublished(resource.data) && resource.data.status == 'approved';
+      // 讀取：所有訪客可讀取（立即公開）
+      allow read: if true;
       
       // 管理員可讀取所有捐贈
       allow read: if isAdmin();
       
-      // 建立：訪客可建立捐贈（對齊 SRS：訪客可捐贈）
-      allow create: if 
-        request.resource.data.keys().hasAll(['demandId', 'donor', 'itemName', 'quantity', 'unit', 'status', 'createdAt', 'publishTime', 'autoApproved']) &&
-        request.resource.data.status == 'pending' &&
-        request.resource.data.autoApproved == false &&
-        
-        // publishTime = now + 2 小時（對齊需求）
-        request.resource.data.publishTime == request.time + duration.value(2, 'h') &&
+      // 建立：訪客可建立捐贈（立即公開）
+      allow create: if
+        request.resource.data.keys().hasAll(['demandId', 'donor', 'itemName', 'quantity', 'unit', 'createdAt', 'publishTime']) &&
+
+        // 立即公開：publishTime == now
+        request.resource.data.publishTime == request.time &&
         request.resource.data.createdAt == request.time &&
         
         // 驗證 demandId 存在

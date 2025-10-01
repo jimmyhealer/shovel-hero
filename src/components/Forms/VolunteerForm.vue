@@ -26,6 +26,7 @@ import {
 import { useVolunteerFormStore } from "@/stores/forms";
 import { useToastStore } from "@/stores/toast";
 import { createVolunteerApplication } from "@/services";
+import { useMapStore } from "@/stores/map";
 
 const props = defineProps({
   open: Boolean,
@@ -37,6 +38,7 @@ const emit = defineEmits(["update:open", "submit"]);
 
 const formStore = useVolunteerFormStore();
 const toastStore = useToastStore();
+const mapStore = useMapStore();
 
 // 使用 computed 來雙向綁定 Pinia store
 const formData = computed(() => formStore.formData);
@@ -99,16 +101,17 @@ async function handleSubmit() {
       note: formData.value.note?.trim() || "",
     };
 
-    // 呼叫 Firestore 服務建立志工報名
-    // publishTime 會自動設為 now + 2 小時
+    // 呼叫 Firestore 服務建立志工報名（立即顯示）
     const applicationId = await createVolunteerApplication(submitData);
 
-    toastStore.success("報名成功！審核時間最長 2 小時。");
+    toastStore.success("報名成功！已公開顯示。");
     console.log("志工報名已建立，ID:", applicationId);
 
     // 提交成功後清除表單
     formStore.reset();
 
+    // 立即刷新地圖上的已報名統計
+    mapStore.refreshAppliedCounts?.();
     emit("update:open", false);
   } catch (err) {
     console.error("提交失敗:", err);

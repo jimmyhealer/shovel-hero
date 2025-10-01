@@ -150,10 +150,15 @@ async function handleDonationSubmit(data) {
             class="p-4 [&_*]:select-text [&_span]:cursor-text [&_p]:cursor-text"
             @pointerdown.stop
           >
-            <Label class="text-sm font-medium mb-3 block">物資需求清單</Label>
+            <div class="flex items-center justify-between mb-3">
+              <Label class="text-sm font-medium">物資需求清單</Label>
+              <span class="text-xs text-gray-500">
+                已登記：{{ selectedDemand.donationCount || 0 }} 筆
+              </span>
+            </div>
             <div class="space-y-2">
               <div
-                v-for="(item, index) in selectedDemand.supplyItems"
+                v-for="(item, index) in (selectedDemand.remainingSupplyItems || selectedDemand.supplyItems)"
                 :key="index"
                 class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
               >
@@ -285,11 +290,25 @@ async function handleDonationSubmit(data) {
             @pointerdown.stop
           >
             <div class="space-y-3">
-              <div>
-                <Label class="text-sm font-medium mb-1 block">所需人數</Label>
-                <p class="text-sm text-gray-600">
-                  {{ selectedDemand.humanNeed.required }} 人
-                </p>
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <Label class="text-sm font-medium mb-1 block">已報名</Label>
+                  <p class="text-sm text-gray-900 font-semibold">
+                    {{ selectedDemand.appliedCount || 0 }} 人
+                  </p>
+                </div>
+                <div>
+                  <Label class="text-sm font-medium mb-1 block">需求</Label>
+                  <p class="text-sm text-gray-600">
+                    {{ selectedDemand.humanNeed.required }} 人
+                  </p>
+                </div>
+                <div>
+                  <Label class="text-sm font-medium mb-1 block">尚缺</Label>
+                  <p class="text-sm text-gray-900 font-semibold">
+                    {{ Math.max(0, (selectedDemand.humanNeed.required || 0) - (selectedDemand.appliedCount || 0)) }} 人
+                  </p>
+                </div>
               </div>
               <div
                 v-if="selectedDemand.humanNeed.riskNotes"

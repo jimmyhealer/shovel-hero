@@ -22,7 +22,6 @@ const toastStore = useToastStore();
 
 const localFilters = ref({
   type: null,
-  status: "approved",
   region: null,
 });
 

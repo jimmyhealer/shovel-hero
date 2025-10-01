@@ -16,44 +16,31 @@ import {
   Timestamp,
   type Query,
   type DocumentData,
+  onSnapshot,
+  type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "@/config/firebase";
 import type { Donation } from "@/types/firestore";
 
 /**
- * 建立物資捐贈
- * 對齊 SRS：publishTime = now + 2 小時
+ * 建立物資捐贈（立即公開）
  */
 export async function createDonation(
   data: Omit<
     Donation,
-    "id" | "status" | "createdAt" | "publishTime" | "autoApproved"
+    "id" | "createdAt" | "publishTime"
   >,
 ): Promise<string> {
   const now = Timestamp.now();
-  const publishTime = Timestamp.fromMillis(now.toMillis() + 2 * 60 * 60 * 1000); // +2 小時
-
   const donationData = {
     ...data,
-    status: "pending",
     createdAt: now,
-    publishTime,
-    autoApproved: false,
+    // 立即可見：publishTime 設為現在
+    publishTime: now,
   };
 
   const docRef = await addDoc(collection(db, "donations"), donationData);
   return docRef.id;
-}
-
-/**
- * 更新物資捐贈狀態（管理員專用）
- */
-export async function updateDonation(
-  donationId: string,
-  data: Partial<Donation>,
-): Promise<void> {
-  const donationRef = doc(db, "donations", donationId);
-  await updateDoc(donationRef, data);
 }
 
 /**
@@ -62,15 +49,12 @@ export async function updateDonation(
 export async function getDonationsByDemand(
   demandId: string,
 ): Promise<Donation[]> {
-  const now = Timestamp.now();
   const donationsRef = collection(db, "donations");
 
   const q = query(
     donationsRef,
     where("demandId", "==", demandId),
-    where("publishTime", "<=", now),
-    where("status", "==", "approved"),
-    orderBy("publishTime", "desc"),
+    orderBy("createdAt", "desc"),
   );
 
   const snapshot = await getDocs(q);
@@ -84,10 +68,38 @@ export async function getDonationsByDemand(
 }
 
 /**
+ * 即時監聽某需求的捐贈數量
+ */
+export function subscribeDonationCount(
+  demandId: string,
+  callback: (count: number) => void,
+): Unsubscribe {
+  const donationsRef = collection(db, "donations");
+  const q = query(donationsRef, where("demandId", "==", demandId));
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.size);
+  });
+}
+
+/**
+ * 即時監聽某需求的捐贈列表（用於彙總數量）
+ */
+export function subscribeDonationsByDemand(
+  demandId: string,
+  callback: (donations: Donation[]) => void,
+): Unsubscribe {
+  const donationsRef = collection(db, "donations");
+  const q = query(donationsRef, where("demandId", "==", demandId));
+  return onSnapshot(q, (snapshot) => {
+    const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Donation[];
+    callback(list);
+  });
+}
+
+/**
  * 查詢所有物資捐贈（管理員視角）
  */
 export async function getAllDonations(filters?: {
-  status?: string;
   demandId?: string;
 }): Promise<Donation[]> {
   const donationsRef = collection(db, "donations");
@@ -96,10 +108,6 @@ export async function getAllDonations(filters?: {
     donationsRef,
     orderBy("createdAt", "desc"),
   );
-
-  if (filters?.status) {
-    q = query(q, where("status", "==", filters.status));
-  }
 
   if (filters?.demandId) {
     q = query(q, where("demandId", "==", filters.demandId));

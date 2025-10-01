@@ -4,13 +4,7 @@
  * 對齊 SRS (plan.md section 10, 11, 12)
  */
 
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  Timestamp,
-} from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/config/firebase";
 
 /**
@@ -19,14 +13,11 @@ import { db } from "@/config/firebase";
 export async function countApprovedApplications(
   demandId: string,
 ): Promise<number> {
-  const now = Timestamp.now();
   const appsRef = collection(db, "volunteerApplications");
 
   const q = query(
     appsRef,
     where("demandId", "==", demandId),
-    where("publishTime", "<=", now),
-    where("status", "==", "approved"),
   );
 
   const snapshot = await getDocs(q);
@@ -37,14 +28,11 @@ export async function countApprovedApplications(
  * 統計需求的捐贈數量
  */
 export async function countApprovedDonations(demandId: string): Promise<number> {
-  const now = Timestamp.now();
   const donationsRef = collection(db, "donations");
 
   const q = query(
     donationsRef,
     where("demandId", "==", demandId),
-    where("publishTime", "<=", now),
-    where("status", "==", "approved"),
   );
 
   const snapshot = await getDocs(q);

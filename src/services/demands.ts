@@ -26,7 +26,6 @@ import { db } from "@/config/firebase";
 import type {
   Demand,
   DemandType,
-  DemandStatus,
 } from "@/types/firestore";
 
 /**
@@ -39,11 +38,9 @@ export async function createDemand(data: Partial<Demand>): Promise<string> {
 
   const demandData = {
     ...data,
-    status: "pending" as DemandStatus,
     createdAt: now,
     updatedAt: now,
     publishTime,
-    autoApproved: false,
   };
 
   const docRef = await addDoc(collection(db, "demands"), demandData);
@@ -91,7 +88,7 @@ export async function getDemand(demandId: string): Promise<Demand | null> {
 
 /**
  * 查詢需求列表（訪客視角）
- * 對齊 SRS：只取得 publishTime <= now 且 status = 'approved' 的需求
+ * 對齊 SRS：只取得 publishTime <= now 的需求
  */
 export async function getPublishedDemands(
   filters?: {
@@ -106,7 +103,6 @@ export async function getPublishedDemands(
   let q: Query<DocumentData> = query(
     demandsRef,
     where("publishTime", "<=", now),
-    where("status", "==", "approved"),
     orderBy("publishTime", "desc"),
   );
 
@@ -137,7 +133,6 @@ export async function getPublishedDemands(
  */
 export async function getAllDemands(
   filters?: {
-    status?: DemandStatus;
     type?: DemandType;
   },
 ): Promise<Demand[]> {
@@ -147,10 +142,6 @@ export async function getAllDemands(
     demandsRef,
     orderBy("createdAt", "desc"),
   );
-
-  if (filters?.status) {
-    q = query(q, where("status", "==", filters.status));
-  }
 
   if (filters?.type) {
     q = query(q, where("type", "==", filters.type));
@@ -182,7 +173,6 @@ export function subscribeToPublishedDemands(
   let q: Query<DocumentData> = query(
     demandsRef,
     where("publishTime", "<=", now),
-    where("status", "==", "approved"),
     orderBy("publishTime", "desc"),
   );
 

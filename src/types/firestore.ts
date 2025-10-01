@@ -39,12 +39,6 @@ export type DemandType =
   | "site-stay"
   | "site-food";
 
-export type DemandStatus =
-  | "draft"
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "archived";
 
 export interface HumanNeed {
   required: number;
@@ -65,14 +59,12 @@ export interface BaseDemand {
   region: string;
   location: Location;
   contact: Contact;
-  status: DemandStatus;
   createdBy?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   publishTime: Timestamp; // 審核機制：只顯示 publishTime <= now 的資料
   approvedAt?: Timestamp;
   approvedBy?: string;
-  autoApproved: boolean;
 }
 
 export interface HumanDemand extends BaseDemand {
@@ -84,6 +76,9 @@ export interface HumanDemand extends BaseDemand {
 export interface SupplyDemand extends BaseDemand {
   type: "supply";
   supplyItems: SupplyItem[];
+  donationCount?: number;
+  // 即時計算：尚需的物資清單（以原 SupplyItem 結構表示剩餘數量）
+  remainingSupplyItems?: SupplyItem[];
 }
 
 export interface SiteDemand extends BaseDemand {
@@ -94,7 +89,6 @@ export type Demand = HumanDemand | SupplyDemand | SiteDemand;
 
 // ============= Volunteer Applications 志工報名 =============
 
-export type ApplicationStatus = "pending" | "approved" | "rejected";
 
 export interface VolunteerApplication {
   id: string;
@@ -104,17 +98,14 @@ export interface VolunteerApplication {
   skills: string[];
   tools: string[];
   note: string;
-  status: ApplicationStatus;
   createdAt: Timestamp;
   publishTime: Timestamp; // 審核機制：2 小時後自動通過
   reviewedAt?: Timestamp;
   reviewedBy?: string;
-  autoApproved: boolean;
 }
 
 // ============= Donations 物資捐贈 =============
 
-export type DonationStatus = "pending" | "approved" | "rejected";
 
 export interface Donation {
   id: string;
@@ -125,12 +116,10 @@ export interface Donation {
   unit: string;
   eta: string;
   note: string;
-  status: DonationStatus;
   createdAt: Timestamp;
   publishTime: Timestamp; // 審核機制：2 小時後自動通過
   reviewedAt?: Timestamp;
   reviewedBy?: string;
-  autoApproved: boolean;
 }
 
 // ============= Comments 留言 =============
