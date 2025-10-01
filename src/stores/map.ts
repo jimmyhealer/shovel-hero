@@ -64,7 +64,12 @@ export const useMapStore = defineStore("map", () => {
   function updateDemand(demandId: string, updates: Partial<Demand>) {
     const index = demands.value.findIndex((d) => d.id === demandId);
     if (index !== -1) {
-      demands.value[index] = { ...demands.value[index], ...updates } as Demand;
+      const updated = { ...demands.value[index], ...updates } as Demand;
+      demands.value[index] = updated;
+      // 若目前選中的是同一筆需求，將選中物件指向最新的實例，確保即時更新
+      if (selectedDemand.value && selectedDemand.value.id === demandId) {
+        selectedDemand.value = updated;
+      }
     }
   }
 
@@ -79,6 +84,13 @@ export const useMapStore = defineStore("map", () => {
     unsubscribe.value = subscribeToPublishedDemands(
       async (newDemands) => {
         demands.value = newDemands;
+        // 若已選擇某筆需求，將其引用更新為最新實例，確保 DetailPanel 即時更新
+        if (selectedDemand.value) {
+          const next = newDemands.find((d) => d.id === selectedDemand.value!.id);
+          if (next) {
+            selectedDemand.value = next as Demand;
+          }
+        }
         // 異步刷新人力需求的 appliedCount，不阻塞 UI 繪製
         refreshAppliedCounts();
         // 建立/更新各需求的即時監聽（志工/捐贈）
