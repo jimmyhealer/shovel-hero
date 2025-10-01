@@ -1,0 +1,88 @@
+---
+alwaysApply: true
+---
+Shovel Heroes 2.0（鏟子英雄 2.0）— Cursor 專案規則
+
+單一事實來源（必讀）
+- 規劃準繩：所有決策、資料結構、流程與 UX 一律「優先對齊」@plan.md（SRS）。
+- 衝突處理：若程式碼與 @plan.md 衝突，以 @plan.md 為準，隨後調整實作。
+- 路徑別名：Vite `@` 指向 `src`（見 `vite.config.js`）。
+
+目標與量測
+- 首屏地圖載入（3G 冷啟）≤ 3 秒。
+- 需求建立至審核通過的中位時間 ≤ 30 分鐘。
+- 志工報名成功率 ≥ 80%。
+- 月活管理員審核覆蓋率 ≥ 95%。
+
+技術堆疊（固定）
+- 前端：Vue 3、Vite、Tailwind CSS、shadcn-vue、Leaflet、Pinia。
+- 後端：Firebase（Firestore、Functions、Auth、Hosting）。
+- 不可替換：地圖僅用 Leaflet + OSM；請勿引入其他主要框架或地圖套件。
+
+目錄與檔案慣例
+- 地圖：`src/components/Map`（`MapView.vue`, `DetailPanel.vue`, `FilterBar.vue`）。
+- UI：`src/components/ui`（shadcn-vue 封裝與抽屜元件）。
+- 狀態：`src/stores`（如 `map.js`, `auth.js`）。
+- 路由：`src/router`；頁面於 `src/views`。
+- 設定：`src/config/firebase.js`、`src/lib/utils.js`。
+
+開發命令
+- 開發：`npm run dev`（或 `bun dev`）。
+- 建置：`npm run build`（或 `bun run build`）。
+- 預覽：`npm run preview`（或 `bun run preview`）。
+
+程式風格與組件慣例
+- Vue：Composition API + <script setup>；習慣順序 script -> template -> style。
+- 樣式：Tailwind 優先；UI 元件優先使用 `src/components/ui` 封裝。
+- 圖示：一律使用 shadcn-vue icon library 搭配 Lucide 圖示。
+- 命名：語意清楚的英文；函式用動詞、變數用名詞；避免縮寫。
+- 控制流程：早返回、錯誤邊界明確；避免深層巢狀；可讀性優先。
+- 格式：遵循既有格式；避免不相關的大幅重排。
+
+地圖互動與 UX（對齊 @plan.md）
+- 互動：點擊圖丁後，右側詳情面板滑入；地圖向左移動呈分欄（桌面）。
+- 行動：詳情顯示基本資訊、狀態、與按鈕（報名、捐贈、分享）。
+- 篩選：支援依類型、狀態、時間排序與篩選；關鍵字搜尋（地名、需求名）。
+- RWD：手機優先；手機詳情以全屏切換；桌面為分欄。
+- A11y：鍵盤可操作、焦點可見、對比達 WCAG AA；圖丁/按鈕有 ARIA 標籤。
+
+效能與載入策略
+- 目標：首屏地圖 ≤ 3 秒（3G 冷啟）。
+- 策略：懶載入/分割碼地圖與詳情面板；避免大型同步阻塞；圖片/圖示最佳化。
+
+狀態管理
+- 跨頁共用狀態使用 Pinia；儲存於 `src/stores`；狀態切片以功能域劃分。
+
+資料模型與 API（依 @plan.md 節 10、12）
+- 集合（摘要）：
+  - `demands`（type: human|supply|site-*）：`title/description/region/location/contact/status` 等，含型別專屬欄位。
+  - `volunteerApplications`、`donations`：申請/捐贈人資訊、狀態、時間戳。
+  - `comments`、`approvals`、`notifications`、`auditLogs`：審核、通知、稽核紀錄。
+- 自動化：
+  - `demands` 建立 30 分鐘未處理自動通過；
+  - `volunteerApplications`/`donations` 2 小時未處理自動通過；
+  - Scheduler 每 5 分鐘掃描並執行。
+
+安全與權限（依 @plan.md 節 11）
+- 訪客可讀 `demands` 的 `approved` 與公共場站資料。
+- 訪客可建立 `volunteerApplications`、`donations`（僅必要欄位）。
+- 只有管理員可寫入/修改 `demands`、變更狀態、刪除留言。
+- Functions 可寫入 `approvals`、`auditLogs`、`notifications`。
+- 所有寫入需欄位白名單驗證與長度/格式限制（電話、Email）。
+
+提交準則
+- 以 @plan.md 為準；涉及資料模型、權限或流程的變更，於註解標註「對齊 SRS」。
+- 新增第三方依賴前，確認與 Vite/Vue/ESM 相容。
+- UI 一致性：優先使用現有 `ui` 元件；新增元件比照現有檔名與 props 模式。
+
+限制與避免事項
+- 不引入其他地圖框架（如 Mapbox/Google Maps）。
+- 不繞過 Firestore 規則；敏感操作交由 Functions。
+- 不破壞手機端抽屜/詳情的全屏體驗。
+
+參考
+- 詳細需求與規格：@plan.md。
+- Cursor 規則撰寫建議：使用者空間規則文檔。
+
+技術
+- 使用 TypesScript。
